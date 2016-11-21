@@ -3,8 +3,14 @@ from Robinhood import Robinhood
 #Setup
 my_trader = Robinhood();
 #login
-my_trader.login(username="YOUR_USERNAME", password="YOUR_PASSWORD")
+my_trader.login_prompt()
 
+
+# save in excel file name: Robinhood_Securities
+my_trader.toCSV(my_trader.order_by_date())
+# or
+#my_trader.toCSV(my_trader.securities_owned_info())
+'''
 #Get stock information
     #Note: Sometimes more than one instrument may be returned for a given stock symbol
 stock_instrument = my_trader.instruments("GEVO")[0]
@@ -27,3 +33,4 @@ buy_order = my_trader.place_buy_order(stock_instrument, 1)
 
 #Place a sell order
 sell_order = my_trader.place_sell_order(stock_instrument, 1)
+'''

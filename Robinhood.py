@@ -3,6 +3,7 @@ import getpass
 import json
 import requests
 import urllib
+import csv
 
 class Robinhood:
 
@@ -231,7 +232,70 @@ class Robinhood:
             if quantity > 0:
                 securities.append(self.session.get(position['instrument']).json()['symbol'])
         return securities
-
+        
+    def securities_owned_info(self):
+        """
+        Returns a list of symbols of securities of which there are more
+        than zero shares in user's portfolio with price.
+        """
+        positions = self.positions()        
+        securities = []
+        for position in positions['results']:
+            quantity = float(position['quantity'])
+            if quantity > 0:
+                securities.append(self.order_item_info(position))
+        return securities
+    
+    def order_by_date(self):
+        orders = self.order_history()
+        securities = []
+        flag = True
+        while flag:
+            for order in orders['results']:
+                if order['state'] == 'filled':
+                    securities.append(self.item_info(order))
+            if orders['next'] is not None:
+                orders = self.session.get(str(orders['next'])).json()
+            else:
+                flag = False
+        return securities
+    
+    def order_by_securities(self):
+        orders = self.order_history()
+        securities = {}
+        flag = True
+        while flag:
+            for order in orders['results']:
+                if order['state'] == 'filled':
+                    ticker = self.session.get(order['instrument']).json()['symbol']
+                    isSecurity = securities.get(ticker, False)
+                    if bool(isSecurity):
+                        tempDic = securities[ticker]
+                        tempDic.append(self.item_info(order))
+                        securities[ticker] = tempDic
+                    else:
+                        securities[ticker] = [self.item_info(order)]
+            if orders['next'] is not None:
+                orders = self.session.get(str(orders['next'])).json()
+            else:
+                flag = False        
+        return securities
+        
+    def item_info(self, order):
+        return {
+            'symbol': self.session.get(order['instrument']).json()['symbol'],
+            'date': order['updated_at'],
+            'price': order['average_price'],
+            'quantity': order['quantity'],
+            'side': order['side']
+        }
+        
+    def order_item_info(self, order):
+        return {
+            'symbol': self.session.get(order['instrument']).json()['symbol'],
+            'date': order['created_at'],
+            'price': float(order['average_buy_price']) * float(order['quantity']),
+        }
     ##############################
     #PLACE ORDER
     ##############################
@@ -257,3 +321,34 @@ class Robinhood:
     def place_sell_order(self, instrument, quantity, bid_price=None):
         transaction = "sell"
         return self.place_order(instrument, quantity, bid_price, transaction)
+
+    ##############################
+    #PRINT
+    ##############################
+    def print(self, securities):
+        if type(securities) is list:            
+            if len(securities[0]) == 3:                
+                for security in securities:
+                    print ("%s,%s,%f" % (security['symbol'], security['date'], security['price']))
+            else:
+                for security in securities:
+                    print ("%s,%s,%s,%s,%s" % (security['date'], security['symbol'], security['price'], security['quantity'], security['side']))
+        else:
+            for key, value in securities.items():
+                print (key)
+                for v in value:  
+                    print ("\t%s,%s,%s,%s,%s" % (v['date'], v['symbol'], v['price'], v['quantity'], v['side']))
+
+    def toCSV(self, securities):
+        with open('Robinhood_Securities.csv', 'w', newline='') as f:
+            if len(securities[0]) == 3: 
+                keys = ['date', 'symbol', 'price' ]
+                writer = csv.DictWriter(f, keys)
+                writer.writeheader()
+                writer.writerows(securities)
+            else:
+                keys = ['date', 'symbol', 'price', 'quantity', 'side']
+                writer = csv.DictWriter(f, keys)
+                writer.writeheader()
+                writer.writerows(securities)
+            
