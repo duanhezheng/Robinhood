@@ -63,7 +63,7 @@ class Robinhood:
 
     def login_prompt(self):
         """Prompts user for username and password and calls login()."""
-        username = raw_input("Username: ")
+        username = input("Username: ")
         password = getpass.getpass()
         return self.login(username=username, password=password)
 
@@ -95,7 +95,7 @@ class Robinhood:
     def quote_data(self, stock=None):
         #Prompt for stock if not entered
         if stock is None:
-            stock = raw_input("Symbol: ");
+            stock = input("Symbol: ");
         url = str(self.endpoints['quotes']) + str(stock) + "/"
         #Check for validity of symbol
         try:
